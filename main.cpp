@@ -38,6 +38,13 @@ int main(int argc, char **argv) {
     imshow("blue.png", bgr[0]);
     waitKey(0);
 
+    //-------------------------------------------------------------------------------
+    /*converting Lenna to greyscale*/
+    Mat greyMat;
+    cvtColor(image, greyMat, CV_BGR2GRAY);
+    imwrite("greyscale.png", greyMat);
+    imshow("greyscale.png", greyMat);
+    waitKey(0);
 
     return 0;
 }
