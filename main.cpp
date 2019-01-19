@@ -69,7 +69,26 @@ int main(int argc, char **argv) {
     imshow(window_name, dst);
     waitKey(0);
 
+    //-------------------------------------------------------------------------------
+    // rotate 90 angles
+    if (display_caption(image, const_cast<char *>("rotate")) != 0) { return 0; }
+    float angle = 90;
 
+    // get rotation matrix for rotating the image around its center in pixel coordinates
+    Point2f center(static_cast<float>((image.cols - 1) / 2.0), static_cast<float>((image.rows - 1) / 2.0));
+    Mat rot = getRotationMatrix2D(center, angle, 1.0);
+    // determine bounding rectangle, center not relevant
+    Rect2f bbox = RotatedRect(Point2f(), image.size(), angle).boundingRect2f();
+    // adjust transformation matrix
+    rot.at<double>(0, 2) += bbox.width / 2.0 - image.cols / 2.0;
+    rot.at<double>(1, 2) += bbox.height / 2.0 - image.rows / 2.0;
+
+    warpAffine(image, dst, rot, bbox.size());
+    imwrite("rotated_image.png", dst);
+    imshow(window_name, dst);
+    waitKey(0);
+
+    
     return 0;
 }
 
