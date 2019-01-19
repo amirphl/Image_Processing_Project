@@ -88,7 +88,15 @@ int main(int argc, char **argv) {
     imshow(window_name, dst);
     waitKey(0);
 
-    
+    //-------------------------------------------------------------------------------
+    // rotate 90 angles
+    if (display_caption(image, const_cast<char *>("resize")) != 0) { return 0; }
+    Mat r;
+    resize(image, r, Size(), 0.5, 1);
+    imwrite("resized_image.png", r);
+    imshow(window_name, r);
+    waitKey(0);
+
     return 0;
 }
 
