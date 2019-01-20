@@ -1,21 +1,29 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/objdetect/objdetect.hpp>
+#include <opencv/cv.hpp>
 #include <iostream>
 
 using namespace cv;
 using namespace std;
 
 /// Global Variables
-int DELAY_CAPTION = 1000;
+int DELAY_CAPTION = 500;
 int MAX_KERNEL_LENGTH = 31;
 char *window_name = "Display window";
-int edgeThresh = 1;
 int lowThreshold;
 int const max_lowThreshold = 100;
 int ratio = 3;
 int kernel_size = 3;
-Mat image, bgr[3], grey_image, smoothed_image, rotated_image, resized_image, detected_edges, edges;
+Mat image;
+Mat bgr[3];
+Mat grey_image;
+Mat smoothed_image;
+Mat rotated_image;
+Mat resized_image;
+Mat detected_edges;
+Mat edges;
 
 ///functions
 void CannyThreshold(int, void *);
@@ -24,10 +32,14 @@ void apply_segmentation(Mat);
 
 int display_caption(Mat, char *);
 
+void detectAndDraw(Mat, CascadeClassifier,
+                   const CascadeClassifier &,
+                   double);
+
 int main(int argc, char **argv) {
     /// reading and displaying image
 
-    if (argc != 2) {
+    if (argc != 5) {
         cout << "Usage: display_image ImageToLoadAndDisplay" << endl;
         return -1;
     }
@@ -143,6 +155,48 @@ int main(int argc, char **argv) {
     //-------------------------------------------------------------------------------
     // Face detection
     if (display_caption(image, "face detection") != 0) { return 0; }
+
+    // PreDefined trained XML classifiers with facial features
+    CascadeClassifier cascade, nestedCascade;
+    double scale = 1;
+    // Load classifiers from "opencv/data/haarcascades" directory
+    nestedCascade.load(argv[3]);
+
+    // Change path before execution
+    cascade.load(argv[4]);
+
+    detectAndDraw(image.clone(), cascade, nestedCascade, scale);
+
+    waitKey(0);
+
+    //-------------------------------------------------------------------------------
+    // Framing
+    if (display_caption(image, "farming") != 0) { return 0; }
+
+    // Create a VideoCapture object and open the input file
+    // If the input is the web camera, pass 0 instead of the video file name
+    VideoCapture cap(argv[2]);
+    const int num_of_frames = 5;
+    const int delay = 500; //ms
+    int counter = 0;
+    while (counter < num_of_frames) {
+        Mat frame;
+        // Capture frame-by-frame
+        cap >> frame;
+        // If the frame is empty, break immediately
+        if (frame.empty())
+            break;
+        // Display the resulting frame
+        imshow("video", frame);
+        waitKey(delay);
+        counter++;
+    }
+
+    // When everything done, release the video capture object
+    cap.release();
+
+    // Closes all the frames
+    destroyAllWindows();
 
     return 0;
 }
@@ -279,4 +333,38 @@ void apply_segmentation(Mat src) {
     }
     // Visualize the final image
     imshow(window_name, dst);
+}
+
+void detectAndDraw(Mat img, CascadeClassifier cascade,
+                   const CascadeClassifier &nestedCascade,
+                   double scale) {
+    vector<Rect> faces, faces2;
+    Mat gray, smallImg;
+
+    double fx = 1 / scale;
+    cvtColor(img, gray, COLOR_BGR2GRAY); // Convert to Gray Scale
+    // Resize the Grayscale Image
+    resize(gray, smallImg, Size(), fx, fx, INTER_LINEAR);
+
+    equalizeHist(smallImg, smallImg);
+    // Detect faces of different sizes using cascade classifier
+    cascade.detectMultiScale(smallImg, faces, 1.1,
+                             2, 0 | CASCADE_SCALE_IMAGE, Size(10, 100));
+
+    // Draw rectangles around the faces
+    for (const auto &r : faces) {
+        Mat smallImgROI;
+        vector<Rect> nestedObjects;
+        Scalar color = Scalar(244, 66, 101); // Color for Drawing tool
+
+        rectangle(img, cvPoint(cvRound(r.x * scale), cvRound(r.y * scale)),
+                  cvPoint(cvRound((r.x + r.width - 1) * scale),
+                          cvRound((r.y + r.height - 1) * scale)), color, 3, 8, 0);
+        if (nestedCascade.empty())
+            continue;
+    }
+
+    // Show Processed Image with detected faces
+    imwrite("face.png", img);
+    imshow(window_name, img);
 }
