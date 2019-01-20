@@ -36,6 +36,8 @@ void detectAndDraw(Mat, CascadeClassifier,
                    const CascadeClassifier &,
                    double);
 
+//input : image , video , classifier 1 , classifier 2
+//input example: C:\Users\amirphl\CLionProjects\Imgae_Processing_Project_Phase_1\Lenna.png C:\Users\amirphl\Desktop\videos\1.mp4 C:\opencv\mingw-build\install\etc\haarcascades\\haarcascade_fullbody.xml C:\opencv\mingw-build\install\etc\haarcascades\haarcascade_frontalface_default.xml
 int main(int argc, char **argv) {
     /// reading and displaying image
 
@@ -332,6 +334,7 @@ void apply_segmentation(Mat src) {
         }
     }
     // Visualize the final image
+    imwrite("segmented.png", dst);
     imshow(window_name, dst);
 }
 
