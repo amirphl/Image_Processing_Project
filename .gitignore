@@ -1,2 +1,10 @@
 *.xml
 .idea/
+.*docx
+test2.cpp
+test3.cpp
+test4.cpp
+test5.cpp
+test6.cpp
+test7.cpp
+test8.cpp
