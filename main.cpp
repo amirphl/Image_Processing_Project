@@ -9,172 +9,196 @@ using namespace cv;
 using namespace std;
 
 /// Global Variables
-int DELAY_CAPTION = 500;
-int MAX_KERNEL_LENGTH = 31;
-char *window_name = "Display window";
+const int DELAY_CAPTION = 500;
+const int MAX_KERNEL_LENGTH = 31;
+const char window_name[] = {'D', 'i', 's', 'p', 'l', 'a', 'y', ' ', 'w', 'i', 'n', 'd', 'o', 'w'};
 int lowThreshold;
-int const max_lowThreshold = 100;
-int ratio = 3;
-int kernel_size = 3;
-Mat image;
-Mat bgr[3];
-Mat grey_image;
-Mat smoothed_image;
-Mat rotated_image;
-Mat resized_image;
-Mat detected_edges;
-Mat edges;
+const int max_lowThreshold = 100;
+const int ratio = 3;
+const int kernel_size = 3;
+Mat image, edges, grey_image, detected_edges;
+
+void do_framing(char **argv);
+
+void do_face_detection(char **argv);
 
 ///functions
 void CannyThreshold(int, void *);
 
-void apply_segmentation(Mat);
-
 int display_caption(Mat, char *);
+
+void extract_blue_channel();
+
+void convert_to_greyscale();
+
+void applying_gaussian_blur();
+
+void do_rotate();
+
+void do_resize();
+
+void do_edge_detection();
 
 void detectAndDraw(Mat, CascadeClassifier,
                    const CascadeClassifier &,
                    double);
 
+void apply_segmentation(Mat);
+
+
 //input : image , video , classifier 1 , classifier 2
 //input example: C:\Users\amirphl\CLionProjects\Imgae_Processing_Project_Phase_1\Lenna.png C:\Users\amirphl\Desktop\videos\1.mp4 C:\opencv\mingw-build\install\etc\haarcascades\\haarcascade_fullbody.xml C:\opencv\mingw-build\install\etc\haarcascades\haarcascade_frontalface_default.xml
 int main(int argc, char **argv) {
-    /// reading and displaying image
-
     if (argc != 5) {
         cout << "Usage: display_image ImageToLoadAndDisplay" << endl;
         return -1;
     }
+    char arr_1[] = "Could not open or find the image...";
+    char arr_2[] = "image";
+    char arr_3[] = "blue channel";
+    char arr_4[] = "greyscale";
+    char arr_5[] = "Gaussian blur";
+    char arr_6[] = "rotated image";
+    char arr_7[] = "resize";
+    char arr_8[] = "detect edges";
+    char arr_9[] = "segmentation";
+    char arr_10[] = "face detection";
+    char arr_11[] = "farming";
 
-    // Read the file
     image = imread(argv[1], CV_LOAD_IMAGE_COLOR);
-
-    // Check for invalid input
+    resize(image, image, Size(1500, 1100), 0, 0);
     if (!image.data) {
-        if (display_caption(image, "Could not open or find the image") != 0) { return 0; }
+        if (display_caption(image, arr_1) != 0) { return 0; }
         return -1;
     }
-
-    // Create a window for display
     namedWindow(window_name, WINDOW_AUTOSIZE);
-    if (display_caption(image, "image") != 0) { return 0; }
-
-    // Show our image inside it.
+    if (display_caption(image, arr_2) != 0) { return 0; }
     imshow(window_name, image);
-
-    // Wait for a keystroke in the window
     waitKey(0);
 
-    //-------------------------------------------------------------------------------
-    /// Extracting blue channel
-    if (display_caption(image, "blue channel") != 0) { return 0; }
+    if (display_caption(image, arr_3) != 0) { return 0; }
+    extract_blue_channel();
 
-    //split source
-    split(image, bgr);
+    if (display_caption(image, arr_4) != 0) { return 0; }
+    convert_to_greyscale();
+
+    if (display_caption(image, arr_5) != 0) { return 0; }
+    applying_gaussian_blur();
+
+    if (display_caption(image, arr_6) != 0) { return 0; }
+    do_rotate();
+
+    if (display_caption(image, arr_7) != 0) { return 0; }
+    do_resize();
+
+    if (display_caption(image, arr_8) != 0) { return 0; }
+    do_edge_detection();
+
+    if (display_caption(image, arr_9) != 0) { return 0; }
+    apply_segmentation(image);
+
+    if (display_caption(image, arr_10) != 0) { return 0; }
+    do_face_detection(argv);
+
+    if (display_caption(image, arr_11) != 0) { return 0; }
+    do_framing(argv);
+
+    destroyAllWindows();
+    return 0;
+}
+
+void extract_blue_channel() {
+    Mat temp = image.clone();
+    for (int j = 0; j < image.rows; ++j) {
+        for (int i = 0; i < image.cols; ++i) {
+            Vec3b color = temp.at<Vec3b>(Point(i, j));
+            color[1] = 0;
+            color[2] = 0;
+            temp.at<Vec3b>(Point(i, j)) = color;
+        }
+    }
 
     //Note: OpenCV uses BGR color order
-    //blue channel
-    imwrite("blue.png", bgr[0]);
-    imshow(window_name, bgr[0]);
+    imwrite("blue.png", temp);
+    imshow(window_name, temp);
     waitKey(0);
+}
 
-    //-------------------------------------------------------------------------------
-    ///Converting Lenna to greyscale
-    if (display_caption(image, "greyscale") != 0) { return 0; }
-
+void convert_to_greyscale() {
     cvtColor(image, grey_image, CV_BGR2GRAY);
     imwrite("greyscale.png", grey_image);
     imshow(window_name, grey_image);
     waitKey(0);
+}
 
-    //-------------------------------------------------------------------------------
-    /// Applying Gaussian blur
-    if (display_caption(image, "Gaussian blur") != 0) { return 0; }
 
+void applying_gaussian_blur() {
+    Mat smoothed_image;
     for (int i = 1; i < MAX_KERNEL_LENGTH; i = i + 2) {
         GaussianBlur(image, smoothed_image, Size(i, i), 0, 0);
     }
     imwrite("Gaussian_blur.png", smoothed_image);
     imshow(window_name, smoothed_image);
     waitKey(0);
+}
 
-    //-------------------------------------------------------------------------------
-    /// Rotate 90 angles
-    if (display_caption(image, "rotated image") != 0) { return 0; }
+void do_rotate() {
+    Mat rotated_image, smoothed_image;
     const float angle = 90;
-
     // get rotation matrix for rotating the image around its center in pixel coordinates
-    Point2f center(static_cast<float>((image.cols - 1) / 2.0), static_cast<float>((image.rows - 1) / 2.0));
+    Point2f center((image.cols - 1) / 2.0, (image.rows - 1) / 2.0);
     rotated_image = getRotationMatrix2D(center, angle, 1.0);
     // determine bounding rectangle, center not relevant
     Rect2f bbox = RotatedRect(Point2f(), image.size(), angle).boundingRect2f();
     // adjust transformation matrix
     rotated_image.at<double>(0, 2) += bbox.width / 2.0 - image.cols / 2.0;
     rotated_image.at<double>(1, 2) += bbox.height / 2.0 - image.rows / 2.0;
-
     warpAffine(image, smoothed_image, rotated_image, bbox.size());
     imwrite("rotated_image.png", smoothed_image);
     imshow(window_name, smoothed_image);
     waitKey(0);
+}
 
-    //-------------------------------------------------------------------------------
-    // Resize
-    if (display_caption(image, "resize") != 0) { return 0; }
+void do_edge_detection() {
+    /// Create a matrix of the same type and size as src (for edges)
+    edges.create(image.size(), image.type());
+    /// Create a window
+    namedWindow(window_name, CV_WINDOW_AUTOSIZE);
+    /// Create a Trackbar for user to enter threshold
+    createTrackbar("Min Threshold:", window_name, &lowThreshold, max_lowThreshold, CannyThreshold);
+    /// Show the image
+    CannyThreshold(0, nullptr);
+    imwrite("edges.png", edges);
+    waitKey(0);
+    destroyWindow(window_name);
+    namedWindow(window_name, CV_LOAD_IMAGE_COLOR);
+}
+
+void do_resize() {
+    Mat resized_image;
     const float m_x = 0.5;
     const float m_y = 1;
     resize(image, resized_image, Size(), m_x, m_y);
     imwrite("resized_image.png", resized_image);
     imshow(window_name, resized_image);
     waitKey(0);
+}
 
-    //-------------------------------------------------------------------------------
-    // Edge detection
-    if (display_caption(image, "detect edges") != 0) { return 0; }
-    /// Create a matrix of the same type and size as src (for edges)
-    edges.create(image.size(), image.type());
-
-    /// Create a window
-    namedWindow(window_name, CV_WINDOW_AUTOSIZE);
-
-    /// Create a Trackbar for user to enter threshold
-    createTrackbar("Min Threshold:", window_name, &lowThreshold, max_lowThreshold, CannyThreshold);
-
-    /// Show the image
-    CannyThreshold(0, nullptr);
-
-    imwrite("edges.png", edges);
-    waitKey(0);
-    destroyWindow(window_name);
-    namedWindow(window_name, CV_LOAD_IMAGE_COLOR);
-
-    //-------------------------------------------------------------------------------
-    // Segmentation
-    if (display_caption(image, "segmentation") != 0) { return 0; }
-
-    apply_segmentation(image);
-    waitKey(0);
-
-    //-------------------------------------------------------------------------------
-    // Face detection
-    if (display_caption(image, "face detection") != 0) { return 0; }
-
+void do_face_detection(char **argv) {
     // PreDefined trained XML classifiers with facial features
     CascadeClassifier cascade, nestedCascade;
     double scale = 1;
     // Load classifiers from "opencv/data/haarcascades" directory
+//    nestedCascade.load(R"(C:\opencv\mingw-build\install\etc\haarcascades\haarcascade_fullbody.xml)");
     nestedCascade.load(argv[3]);
-
     // Change path before execution
+//    cascade.load(R"(C:\opencv\mingw-build\install\etc\haarcascades\haarcascade_frontalface_default.xml)");
     cascade.load(argv[4]);
-
     detectAndDraw(image.clone(), cascade, nestedCascade, scale);
-
     waitKey(0);
+}
 
-    //-------------------------------------------------------------------------------
-    // Framing
-    if (display_caption(image, "farming") != 0) { return 0; }
-
+void do_framing(char **argv) {
     // Create a VideoCapture object and open the input file
     // If the input is the web camera, pass 0 instead of the video file name
     VideoCapture cap(argv[2]);
@@ -193,24 +217,14 @@ int main(int argc, char **argv) {
         waitKey(delay);
         counter++;
     }
-
     // When everything done, release the video capture object
     cap.release();
-
-    // Closes all the frames
-    destroyAllWindows();
-
-    return 0;
 }
 
 
 int display_caption(Mat src, char *caption) {
-    Mat d;
-    d = Mat::zeros(src.cols / 4, src.rows / 2, src.type());
-    putText(d, caption,
-            Point(10, src.rows / 8),
-            CV_FONT_HERSHEY_COMPLEX, 1, Scalar(108, 200, 57));
-
+    Mat d = Mat::zeros(src.cols / 4, src.rows / 2, src.type());
+    putText(d, caption, Point(10, src.rows / 8), CV_FONT_HERSHEY_COMPLEX, 1, Scalar(108, 200, 57));
     imshow(window_name, d);
     int c = waitKey(DELAY_CAPTION);
     if (c >= 0) { return -1; }
@@ -224,13 +238,10 @@ int display_caption(Mat src, char *caption) {
 void CannyThreshold(int, void *) {
     /// Reduce noise with a kernel 3x3
     blur(grey_image, detected_edges, Size(3, 3));
-
     /// Canny detector
     Canny(detected_edges, detected_edges, lowThreshold, lowThreshold * ratio, kernel_size);
-
     /// Using Canny's output as a mask, we display our result
     edges = Scalar::all(0);
-
     image.copyTo(edges, detected_edges);
     imshow(window_name, edges);
 }
@@ -270,27 +281,27 @@ void apply_segmentation(Mat src) {
     // convert back to 8bits gray scale
     imgResult.convertTo(imgResult, CV_8UC3);
     imgLaplacian.convertTo(imgLaplacian, CV_8UC3);
-    // imshow( "Laplace Filtered Image", imgLaplacian );
-    // imshow( "New Sharped Image", imgResult );
+    imshow("Laplace Filtered Image", imgLaplacian);
+    imshow("New Sharped Image", imgResult);
     // Create binary image from source image
     Mat bw;
     cvtColor(imgResult, bw, COLOR_BGR2GRAY);
     threshold(bw, bw, 40, 255, THRESH_BINARY | THRESH_OTSU);
-    // imshow("Binary Image", bw);
+    imshow("Binary Image", bw);
     // Perform the distance transform algorithm
     Mat dist;
     distanceTransform(bw, dist, DIST_L2, 3);
     // Normalize the distance image for range = {0.0, 1.0}
     // so we can visualize and threshold it
     normalize(dist, dist, 0, 1.0, NORM_MINMAX);
-    // imshow("Distance Transform Image", dist);
+    imshow("Distance Transform Image", dist);
     // Threshold to obtain the peaks
     // This will be the markers for the foreground objects
     threshold(dist, dist, 0.4, 1.0, THRESH_BINARY);
     // Dilate a bit the dist image
     Mat kernel1 = Mat::ones(3, 3, CV_8U);
     dilate(dist, dist, kernel1);
-    // imshow("Peaks", dist);
+    imshow("Peaks", dist);
     // Create the CV_8U version of the distance image
     // It is needed for findContours()
     Mat dist_8u;
@@ -306,13 +317,13 @@ void apply_segmentation(Mat src) {
     }
     // Draw the background marker
     circle(markers, Point(5, 5), 3, Scalar(255), -1);
-    // imshow("Markers", markers*10000);
+    imshow("Markers", markers * 10000);
     // Perform the watershed algorithm
     watershed(imgResult, markers);
     Mat mark;
     markers.convertTo(mark, CV_8U);
     bitwise_not(mark, mark);
-    // imshow("Markers_v2", mark); // uncomment this if you want to see how the mark
+    imshow("Markers_v2", mark); // uncomment this if you want to see how the mark
     // image looks like at that point
     // Generate random colors
     vector<Vec3b> colors;
@@ -336,12 +347,13 @@ void apply_segmentation(Mat src) {
     // Visualize the final image
     imwrite("segmented.png", dst);
     imshow(window_name, dst);
+    waitKey(0);
 }
 
 void detectAndDraw(Mat img, CascadeClassifier cascade,
                    const CascadeClassifier &nestedCascade,
                    double scale) {
-    vector<Rect> faces, faces2;
+    vector<Rect> faces;
     Mat gray, smallImg;
 
     double fx = 1 / scale;
@@ -352,17 +364,17 @@ void detectAndDraw(Mat img, CascadeClassifier cascade,
     equalizeHist(smallImg, smallImg);
     // Detect faces of different sizes using cascade classifier
     cascade.detectMultiScale(smallImg, faces, 1.1,
-                             2, 0 | CASCADE_SCALE_IMAGE, Size(10, 100));
+                             2, 0 | CASCADE_SCALE_IMAGE, Size(10, 20));
 
     // Draw rectangles around the faces
-    for (const auto &r : faces) {
+    for (int i = 0; i < faces.size(); i++) {
         Mat smallImgROI;
         vector<Rect> nestedObjects;
         Scalar color = Scalar(244, 66, 101); // Color for Drawing tool
 
-        rectangle(img, cvPoint(cvRound(r.x * scale), cvRound(r.y * scale)),
-                  cvPoint(cvRound((r.x + r.width - 1) * scale),
-                          cvRound((r.y + r.height - 1) * scale)), color, 3, 8, 0);
+        rectangle(img, cvPoint(cvRound(faces[i].x * scale), cvRound(faces[i].y * scale)),
+                  cvPoint(cvRound((faces[i].x + faces[i].width - 1) * scale),
+                          cvRound((faces[i].y + faces[i].height - 1) * scale)), color, 3, 8, 0);
         if (nestedCascade.empty())
             continue;
     }
